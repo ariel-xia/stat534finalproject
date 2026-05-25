@@ -1,81 +1,50 @@
-# Split-First Feature Selection Replication
+# Split-first variance feature selection replication
 
-This folder contains a minimal adaptation of the original Section 4 / Figure 1 code from the paper repo.
+This folder contains a corrected version of the superconductivity experiment from
+Section 4 of the paper's code.
 
-Original files used as the template:
+The original biased pipeline selects the top-variance features on the full
+training-plus-validation sample before validation. This implementation splits
+first:
 
-- `unsupervised-preprocessing/variable_selected_linear_regression.py`
-- `unsupervised-preprocessing/simulations_framework.py`
+1. draw the same superconductivity working and holdout samples,
+2. compute feature variances only on the current training fold,
+3. select the top `M` features from that training fold,
+4. apply those same selected columns to the validation or holdout data,
+5. fit ordinary least squares and record validation and generalization MSE.
 
-The goal is to keep the paper's main example unchanged except for one preprocessing fit line.
+The script produces exactly two final figures by default:
 
-## What Stays The Same
+- `figures/split_first_superconductivity_M10.png`
+- `figures/split_first_superconductivity_M30.png`
 
-The script keeps the Figure 1 synthetic setup:
+It also writes a tidy CSV of the plotted values to
+`results/split_first_superconductivity_results.csv`.
 
-- `beta_j ~ N(0, 1)`
-- covariates generated with the repo's original `standard_t(df)` code
-- Gaussian panels use the repo convention `df=1000000`
-- t-distribution panels use `df=4`
-- first `M` columns are multiplied by `C`
-- `sigma^2 = eta * ((p - M) + C^2 M)` with `eta=1`
-- `TopKVarianceVariableSelector`
-- `LinearRegression(fit_intercept=False)`
-- validation MSE and holdout/generalization MSE
-- Figure 1 grids:
-  - `p=100, M=5, C=5, K=10, n=20..60`
-  - `p=1000, M=10, C=10, K=100, n=200..600`
-  - both `m=n` and `m=1`
+## Run
 
-## Original Leaky Behavior
-
-The original paper/repo behavior computes empirical variances on the combined train and validation covariates:
-
-```python
-Xtrainval = np.vstack((Xtrain, Xvalidation))
-transformation.fit(Xtrainval)
-```
-
-This matches `simulations_framework.py`, where the original code fits the transformation on `Xtrainval`.
-
-## Corrected Split-First Behavior
-
-The corrected behavior changes only the preprocessing fit line:
-
-```python
-transformation.fit(Xtrain)
-```
-
-The selector is then applied to training, validation, and holdout data exactly as in the original MSE logic.
-
-## Quick Test
-
-From the repo root:
+Use a Python environment with `numpy` and `matplotlib` installed. The paper repo
+README recommends Anaconda.
 
 ```bash
-python split_first_feature_selection_replication/compare_split_first_feature_selection.py --quick --reps 100
+python3 split_first_feature_selection_replication/split_first_superconductivity.py
 ```
 
-## Full Run
-
-From the repo root:
+Use `--reps` for a quicker or more stable run. The default is `200`, matching
+the local biased replication script.
 
 ```bash
-python split_first_feature_selection_replication/compare_split_first_feature_selection.py
+python3 split_first_feature_selection_replication/split_first_superconductivity.py --reps 50
 ```
 
-The default is 1000 repetitions per parameter setting.
-
-## Outputs
-
-CSV results:
+The default data path is the paper-provided dataset:
 
 ```text
-split_first_feature_selection_replication/results/split_first_feature_selection_results.csv
+unsupervised-preprocessing/superconductivity/train.csv
 ```
 
-Figures:
+## Paper notation used in the figures
 
-```text
-split_first_feature_selection_replication/figures/
-```
+- `M`: number of selected features, fixed at `10` or `30`.
+- `n`: training sample size, shown on the x-axis.
+- `m`: validation sample size. Solid lines use `m=n`; dashed lines use `m=1`.
